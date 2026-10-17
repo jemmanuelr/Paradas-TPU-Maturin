@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sistema GPS de Paradas y Rutas</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #f0f2f5;
+      color: #1c1e21;
+      padding: 12px;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .container {
+      width: 100%;
+      max-width: 480px;
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    h1 {
+      font-size: 1.25rem;
+      text-align: center;
+      color: #0088cc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .card {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 12px;
+      padding: 14px;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    label {
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: #333;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ced4da;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      margin-top: 4px;
+      margin-bottom: 10px;
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: #0088cc;
+      box-shadow: 0 0 0 2px rgba(0, 136, 204, 0.2);
+    }
+
+    /* Botones */
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background-color 0.2s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background-color: #0088cc; color: white; }
+    .btn-success { background-color: #28a745; color: white; font-size: 1.05rem; padding: 15px; }
+    .btn-outline { background-color: transparent; border: 1px solid #0088cc; color: #0088cc; }
+    .btn-danger { background-color: #dc3545; color: white; }
+    .btn-icon-plus {
+      background-color: #0088cc;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 0.85rem;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Pantalla Activación GPS */
+    .gps-prompt-screen {
+      text-align: center;
+      padding: 30px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    .gps-icon { font-size: 3.5rem; animation: pulse 1.5s infinite; }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    /* Casillas de selección de Rutas */
+    .routes-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 180px;
+      overflow-y: auto;
+      margin-bottom: 12px;
+    }
+    .checkbox-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #ffffff;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 10px 12px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .checkbox-card input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      accent-color: #0088cc;
+    }
+
+    /* Lista de Paradas Grabadas */
+    .stop-list {
+      max-height: 220px;
+      overflow-y: auto;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      background: #ffffff;
+    }
+    .stop-item {
+      padding: 10px 12px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+    }
+    .stop-item:last-child { border-bottom: none; }
+    .stop-coords { font-family: monospace; color: #0066cc; font-size: 0.8rem; }
+    .badge {
+      display: inline-block;
+      background: #e0f2fe;
+      color: #0369a1;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-right: 4px;
+      margin-top: 3px;
+    }
+    .delete-btn {
+      background: none;
+      border: none;
+      color: #dc3545;
+      font-weight: bold;
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+
+    /* Lista en el Formulario de Catálogo */
+    .catalog-list {
+      max-height: 220px;
+      overflow-y: auto;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      background: white;
+      margin-bottom: 12px;
+    }
+    .catalog-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      border-bottom: 1px solid #eee;
+      font-size: 0.9rem;
+    }
+
+    .status-box {
+      font-size: 0.85rem;
+      padding: 8px 12px;
+      border-radius: 6px;
+      background: #e9ecef;
+      text-align: center;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- 1. PANTALLA ACTIVACIÓN GPS -->
+  <div id="screen-gps" class="card gps-prompt-screen">
+    <div class="gps-icon">🛰️</div>
+    <h2>Verificación de GPS</h2>
+    <p style="font-size: 0.9rem; color: #555;">
+      Para comenzar, activa la ubicación de tu teléfono para vincular satélites con precisión.
+    </p>
+    <div id="gpsStatusText" class="status-box" style="width: 100%;">Pulse el botón para activar la ubicación.</div>
+    <button class="btn btn-primary" onclick="activarYVerificarGPS()">
+      📍 Activar / Permitir Ubicación GPS
+    </button>
+  </div>
+
+  <!-- 2. PANTALLA PRINCIPAL -->
+  <div id="screen-main" style="display: none; flex-direction: column; gap: 14px;">
+    <h1>🚍 Marcador de Paradas y Rutas</h1>
+
+    <div class="card">
+      <div class="card-header">
+        <label>Seleccionar Rutas en esta Parada:</label>
+        <button class="btn-icon-plus" onclick="mostrarFormularioCatalogo()">
+          ➕ Gestionar Rutas
+        </button>
+      </div>
+
+      <div id="routeCheckboxesContainer" class="routes-grid"></div>
+
+      <label for="stopNameInput">Nombre/Referencia de Parada (Opcional):</label>
+      <input type="text" id="stopNameInput" placeholder="Ej: Esquina Plaza Bolívar / Frente al Liceo">
+
+      <button id="btnMark" class="btn btn-success" onclick="marcarParadaGPS()">
+        📍 MARCAR PARADA (CALIBRAR GPS)
+      </button>
+      <div id="status" class="status-box">GPS Conectado. Objetivo: Precisión ≤ 5m.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header" style="margin-bottom: 6px;">
+        <label>Paradas Registradas (<span id="countStops">0</span>):</label>
+        <span style="font-size: 0.75rem; color: #666;" id="countRecords">0 registros CSV</span>
+      </div>
+      <div id="stopList" class="stop-list"></div>
+    </div>
+
+    <div class="card">
+      <label style="margin-bottom: 8px; display: block;">Exportar Información (CSV):</label>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <button class="btn btn-primary" onclick="compartirOEnviarCSV()">
+          ✈️ Compartir / Enviar a Telegram
+        </button>
+        <button class="btn btn-outline" onclick="descargarCSV()">
+          💾 Descargar Archivo CSV
+        </button>
+      </div>
+    </div>
+
+    <button class="btn btn-danger" onclick="limpiarTodo()">
+      🗑️ Borrar Todas las Paradas
+    </button>
+  </div>
+
+  <!-- 3. PANTALLA DE CATÁLOGO DE RUTAS -->
+  <div id="screen-catalog" style="display: none; flex-direction: column; gap: 14px;">
+    <h1>📋 Catálogo de Rutas</h1>
+    
+    <div class="card">
+      <label for="catalogInput">Registrar Nueva Ruta:</label>
+      <input type="text" id="catalogInput" placeholder="Ej: Ruta 01 - Centro / UBV">
+      <button class="btn btn-primary" onclick="agregarRutaCatalogo()">
+        ➕ Añadir Ruta al Catálogo
+      </button>
+    </div>
+
+    <div class="card">
+      <label style="margin-bottom: 8px; display: block;">Rutas Registradas Actualmente:</label>
+      <div id="catalogList" class="catalog-list"></div>
+
+      <button class="btn btn-success" onclick="ocultarFormularioCatalogo()">
+        ✓ Finalizar y Volver a Marcar Paradas
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const STORAGE_KEYS = {
+    ROUTES: 'gps_catalogo_rutas_v6',
+    STOPS: 'gps_paradas_data_v6'
+  };
+
+  let rutas = [];
+  let paradas = [];
+
+  window.onload = function() {
+    cargarDatos();
+  };
+
+  function cargarDatos() {
+    const savedRoutes = localStorage.getItem(STORAGE_KEYS.ROUTES);
+    if (savedRoutes) {
+      try { rutas = JSON.parse(savedRoutes); } catch(e) { rutas = []; }
+    } else {
+      rutas = ["Ruta 01 - Centro", "Ruta 05 - Universidad"];
+      guardarRutas();
+    }
+
+    const savedStops = localStorage.getItem(STORAGE_KEYS.STOPS);
+    if (savedStops) {
+      try { paradas = JSON.parse(savedStops); } catch(e) { paradas = []; }
+    }
+  }
+
+  function guardarRutas() { localStorage.setItem(STORAGE_KEYS.ROUTES, JSON.stringify(rutas)); }
+  function guardarParadas() { localStorage.setItem(STORAGE_KEYS.STOPS, JSON.stringify(paradas)); }
+
+  function activarYVerificarGPS() {
+    const statusBox = document.getElementById('gpsStatusText');
+    if (!('geolocation' in navigator)) {
+      statusBox.textContent = "❌ Este navegador no soporta ubicación GPS.";
+      return;
+    }
+
+    statusBox.textContent = "⏳ Conectando con satélites GPS...";
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        document.getElementById('screen-gps').style.display = 'none';
+        document.getElementById('screen-main').style.display = 'flex';
+        renderizarSegmento2Checkboxes();
+        renderizarListaParadas();
+      },
+      (err) => {
+        let msg = "Error al conectar al GPS.";
+        if (err.code === err.PERMISSION_DENIED) {
+          msg = "❌ Permiso denegado. Activa la ubicación en tu teléfono.";
+        }
+        statusBox.textContent = msg;
+        alert(msg);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  }
+
+  function mostrarFormularioCatalogo() {
+    document.getElementById('screen-main').style.display = 'none';
+    document.getElementById('screen-catalog').style.display = 'flex';
+    renderizarCatalogoRutas();
+  }
+
+  function ocultarFormularioCatalogo() {
+    document.getElementById('screen-catalog').style.display = 'none';
+    document.getElementById('screen-main').style.display = 'flex';
+    renderizarSegmento2Checkboxes();
+  }
+
+  function agregarRutaCatalogo() {
+    const input = document.getElementById('catalogInput');
+    const valor = input.value.trim();
+    if (!valor) return alert("Escribe el nombre de la ruta.");
+    if (rutas.some(r => r.toLowerCase() === valor.toLowerCase())) return alert("Esta ruta ya existe.");
+
+    rutas.push(valor);
+    guardarRutas();
+    input.value = '';
+    renderizarCatalogoRutas();
+  }
+
+  function eliminarRutaCatalogo(index) {
+    if (confirm(`¿Deseas eliminar "${rutas[index]}" del catálogo?`)) {
+      rutas.splice(index, 1);
+      guardarRutas();
+      renderizarCatalogoRutas();
+    }
+  }
+
+  function renderizarCatalogoRutas() {
+    const container = document.getElementById('catalogList');
+    if (rutas.length === 0) {
+      container.innerHTML = '<div style="padding: 12px; text-align: center; color: #888;">No hay rutas creadas.</div>';
+      return;
+    }
+    container.innerHTML = '';
+    rutas.forEach((r, idx) => {
+      const item = document.createElement('div');
+      item.className = 'catalog-item';
+      item.innerHTML = `
+        <span><strong>${idx + 1}.</strong> ${escapeHTML(r)}</span>
+        <button class="delete-btn" onclick="eliminarRutaCatalogo(${idx})">🗑️</button>
+      `;
+      container.appendChild(item);
+    });
+  }
+
+  function renderizarSegmento2Checkboxes() {
+    const container = document.getElementById('routeCheckboxesContainer');
+    if (rutas.length === 0) {
+      container.innerHTML = `<div style="text-align: center; color: #777; padding: 10px;">⚠️ No hay rutas. Presiona <b>"➕ Gestionar Rutas"</b>.</div>`;
+      return;
+    }
+    container.innerHTML = '';
+    rutas.forEach((r) => {
+      const label = document.createElement('label');
+      label.className = 'checkbox-card';
+      label.innerHTML = `
+        <input type="checkbox" name="ruta_selected" value="${escapeHTML(r)}">
+        <span>${escapeHTML(r)}</span>
+      `;
+      container.appendChild(label);
+    });
+  }
+
+  function obtenerRutasSeleccionadas() {
+    const checkboxes = document.querySelectorAll('input[name="ruta_selected"]:checked');
+    return Array.from(checkboxes).map(cb => cb.value);
+  }
+
+  // CÁLCULO DE ORDEN SECUENCIAL POR RUTA
+  function obtenerSecuenciaRuta(nombreRuta) {
+    let contador = 0;
+    for (let p of paradas) {
+      if (p.rutas.includes(nombreRuta)) {
+        contador++;
+      }
+    }
+    return contador + 1; // Siguiente número correlativo para esta ruta
+  }
+
+  function marcarParadaGPS() {
+    const rutasSeleccionadas = obtenerRutasSeleccionadas();
+    if (rutasSeleccionadas.length === 0) {
+      alert("Por favor selecciona al menos una ruta asociada a esta parada.");
+      return;
+    }
+
+    const btn = document.getElementById('btnMark');
+    const status = document.getElementById('status');
+    const inputNombre = document.getElementById('stopNameInput');
+    const customName = inputNombre.value.trim();
+
+    btn.disabled = true;
+    status.textContent = '⏳ Calibrando GPS (Buscando satélites)...';
+
+    let lecturas = [];
+    const maxMuestras = 6;
+    let watchId = null;
+
+    const timeoutTimer = setTimeout(() => {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+        if (lecturas.length > 0) procesarMejorLectura(lecturas, customName, rutasSeleccionadas, btn, status, inputNombre);
+        else { status.textContent = '⏱️ Tiempo agotado.'; btn.disabled = false; }
+      }
+    }, 15000);
+
+    watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        lecturas.push(pos.coords);
+        const precActual = Math.round(pos.coords.accuracy);
+        status.textContent = `📡 Muestra ${lecturas.length}/${maxMuestras} - Precisión: ±${precActual}m...`;
+
+        if (pos.coords.accuracy <= 5 || lecturas.length >= maxMuestras) {
+          clearTimeout(timeoutTimer);
+          navigator.geolocation.clearWatch(watchId);
+          watchId = null;
+          procesarMejorLectura(lecturas, customName, rutasSeleccionadas, btn, status, inputNombre);
+        }
+      },
+      (err) => {
+        clearTimeout(timeoutTimer);
+        if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+        btn.disabled = false;
+        status.textContent = '❌ Error GPS: ' + err.message;
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  }
+
+  function procesarMejorLectura(lecturas, customName, rutasSeleccionadas, btn, status, inputNombre) {
+    lecturas.sort((a, b) => a.accuracy - b.accuracy);
+    const mejor = lecturas[0];
+
+    const num = paradas.length + 1;
+    const ahora = new Date();
+
+    // Calcular el orden de la parada para cada una de las rutas asociadas
+    const detalleRutas = rutasSeleccionadas.map(r => {
+      return {
+        nombre: r,
+        ordenSecuencia: obtenerSecuenciaRuta(r)
+      };
+    });
+
+    const nuevaParada = {
+      id: num,
+      nombreParada: customName || `Parada ${num}`,
+      rutas: rutasSeleccionadas,
+      detalleRutas: detalleRutas, // Guarda el nombre de la ruta y su número correlativo
+      lat: mejor.latitude.toFixed(6),
+      lng: mejor.longitude.toFixed(6),
+      precision: Math.round(mejor.accuracy),
+      fecha: ahora.toISOString().slice(0, 10),
+      hora: ahora.toTimeString().slice(0, 8)
+    };
+
+    paradas.push(nuevaParada);
+    guardarParadas();
+    renderizarListaParadas();
+
+    inputNombre.value = '';
+    document.querySelectorAll('input[name="ruta_selected"]').forEach(cb => cb.checked = false);
+
+    status.textContent = `✅ Parada ${num} registrada correctamente (±${nuevaParada.precision}m).`;
+    btn.disabled = false;
+  }
+
+  function renderizarListaParadas() {
+    const container = document.getElementById('stopList');
+    document.getElementById('countStops').textContent = paradas.length;
+
+    let totalRegistros = 0;
+    paradas.forEach(p => totalRegistros += p.rutas.length);
+    document.getElementById('countRecords').textContent = `${totalRegistros} registro(s) en CSV`;
+
+    if (paradas.length === 0) {
+      container.innerHTML = '<div style="padding: 12px; text-align: center; color: #888;">No hay paradas registradas aún.</div>';
+      return;
+    }
+
+    container.innerHTML = '';
+    paradas.slice().reverse().forEach((p) => {
+      const item = document.createElement('div');
+      item.className = 'stop-item';
+
+      // Mostrar badge con la ruta y su número de orden
+      const badges = (p.detalleRutas || p.rutas.map(r => ({nombre: r, ordenSecuencia: '?'}))).map(dr => 
+        `<span class="badge">${escapeHTML(dr.nombre)} <b>(#${dr.ordenSecuencia})</b></span>`
+      ).join('');
+
+      item.innerHTML = `
+        <div>
+          <strong>${escapeHTML(p.nombreParada)}</strong> <small style="color:#666;">(${p.hora})</small>
+          <div>${badges}</div>
+          <span class="stop-coords">${p.lat}, ${p.lng} (±${p.precision}m)</span>
+        </div>
+        <button class="delete-btn" onclick="eliminarParada(${p.id})">✕</button>
+      `;
+      container.appendChild(item);
+    });
+  }
+
+  function eliminarParada(id) {
+    paradas = paradas.filter(p => p.id !== id);
+    paradas.forEach((p, idx) => p.id = idx + 1);
+    
+    // Recalcular secuencias
+    recalcularSecuenciasTodasLasParadas();
+    guardarParadas();
+    renderizarListaParadas();
+  }
+
+  function recalcularSecuenciasTodasLasParadas() {
+    const contadores = {};
+    paradas.forEach(p => {
+      p.detalleRutas = p.rutas.map(r => {
+        if (!contadores[r]) contadores[r] = 0;
+        contadores[r]++;
+        return {
+          nombre: r,
+          ordenSecuencia: contadores[r]
+        };
+      });
+    });
+  }
+
+  // GENERACIÓN DE CSV CON ORDEN DE SECTORES / SECUENCIA
+  function generarCSVContent() {
+    let csv = "id_registro,id_parada,nombre_parada,ruta,orden_secuencia_ruta,latitud,longitud,precision_m,fecha,hora\n";
+    let idRegistro = 1;
+
+    paradas.forEach(p => {
+      const detalles = p.detalleRutas || p.rutas.map(r => ({ nombre: r, ordenSecuencia: 1 }));
+      detalles.forEach(dr => {
+        csv += `"${idRegistro}","${p.id}","${escapeCSV(p.nombreParada)}","${escapeCSV(dr.nombre)}","${dr.ordenSecuencia}","${p.lat}","${p.lng}","${p.precision}","${p.fecha}","${p.hora}"\n`;
+        idRegistro++;
+      });
+    });
+    return csv;
+  }
+
+  function escapeCSV(str) {
+    if (!str) return '';
+    return str.replace(/"/g, '""');
+  }
+
+  function obtenerArchivoCSV() {
+    const nombreArchivo = `recorrido_rutas_paradas_${new Date().toISOString().slice(0,10)}.csv`;
+    const contenido = generarCSVContent();
+    const blob = new Blob([contenido], { type: 'text/csv;charset=utf-8;' });
+    return new File([blob], nombreArchivo, { type: 'text/csv' });
+  }
+
+  function descargarCSV() {
+    if (paradas.length === 0) return alert("No hay paradas registradas.");
+    const file = obtenerArchivoCSV();
+    const url = URL.createObjectURL(file);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = file.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  async function compartirOEnviarCSV() {
+    if (paradas.length === 0) return alert("No hay paradas registradas.");
+    const file = obtenerArchivoCSV();
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: 'Secuencia de Paradas por Ruta GPS',
+          text: 'Adjunto inventario ordenado de paradas según el recorrido de cada ruta.'
+        });
+      } catch (e) {
+        if (e.name !== 'AbortError') alert("Error al compartir: " + e.message);
+      }
+    } else {
+      descargarCSV();
+    }
+  }
+
+  function limpiarTodo() {
+    if (confirm("¿Estás seguro de borrar todas las paradas registradas?")) {
+      paradas = [];
+      guardarParadas();
+      renderizarListaParadas();
+      document.getElementById('status').textContent = 'Paradas borradas. Listo para registrar.';
+    }
+  }
+
+  function escapeHTML(str) {
+    return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+  }
+</script>
+
+</body>
+</html>
